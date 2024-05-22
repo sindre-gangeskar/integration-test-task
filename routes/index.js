@@ -26,19 +26,21 @@ router.get('/', function (req, res, next) {
 router.post('/', async function (req, res, next) {
   try {
     const { username, password, score } = req.body;
-    let data = parseData(usersFile);
+    let data = await parseData(usersFile);
 
-    if (data.users.find(x => x.username === username))
-      res.status(400).json({ message: 'User already exists' });
+      // Return with a message if the user already exists - do nothing
+    if (data.users.find(x => x.username === username)) {
+      return res.status(400).json({ message: 'User already exists' })
+    }
 
-    else {
+    else { // Create user if it does not exist
       data.users.push({ username: username, password: password, score: score });
-      saveData(usersFile, data);
-      res.status(201).json({ message: 'Successfully created user', body: req.body });
+      await saveData(usersFile, data);
+      return res.status(201).json({ message: 'Successfully created user', body: req.body });
     }
 
   } catch (error) {
-    console.log(error);
+    return res.status(500).json({ statusCode: 500, message: 'Internal server error', error: error.message });
   }
 })
 
@@ -47,11 +49,12 @@ router.delete('/', async function (req, res, next) {
     const { username } = req.body;
     let data = parseData(usersFile);
     let dataToKeep = data.users.filter(x => x.username !== username);
-    
+
+    // Send a bad request - user to delete does not exist
     if (!data.users.find(x => x.username === username))
       res.status(400).json({ message: 'User does not exist or has been deleted in a prior action', user: req.body })
-    
-    else {
+
+    else { // Delete user
       data.users = dataToKeep;
       saveData(usersFile, data);
       res.status(200).json({ message: 'Successfully deleted user:', user: req.body });
